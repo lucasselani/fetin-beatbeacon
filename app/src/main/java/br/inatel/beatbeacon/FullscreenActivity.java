@@ -13,7 +13,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.provider.CalendarContract;
+import android.support.design.widget.Snackbar;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.ActionBar;
@@ -29,7 +29,9 @@ import android.view.animation.Animation;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import java.nio.ByteBuffer;
 import java.security.Permissions;
+import java.util.UUID;
 
 import static br.inatel.beatbeacon.R.id.app_color;
 
@@ -83,13 +85,14 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
 
     private static final int REQUEST_ENABLE_BT = 1;
     private static final String TAG = FullscreenActivity.class.getName();
+    private static final String UUID_BEACON = "88c4649c-9875-4b8f-b2e6-5d06ae55f38c";
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
     private FrameLayout mFrameLayout;
 
     private final int COLORS[] = {Color.BLACK, Color.GREEN, Color.BLUE, Color.YELLOW, Color.RED,
                                 Color.GRAY, Color.CYAN, Color.MAGENTA, Color.WHITE};
-    int currentColor = 0;
+    private int previousColor = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,7 +112,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
                 toggle();
             }
         });
-        changeAppColor();
     }
 
     @Override
@@ -179,10 +181,10 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         unregisterReceiver(mReceiver);
     }
 
-    private void changeAppColor(){
-        if(mFrameLayout.getChildCount() > 1)
-        {
-            if(currentColor >= COLORS.length-2) currentColor = 0;
+    private void changeAppColor(final int currentColor){
+        if(currentColor == previousColor) return;
+
+        if(mFrameLayout.getChildCount() > 1) {
             mFrameLayout.removeView(findViewById(R.id.app_color));
         }
 
@@ -196,12 +198,12 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         fadeIn.setAnimationListener(new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
-                mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[++currentColor]);
+                mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[currentColor]);
             }
 
             @Override
             public void onAnimationEnd(Animation animation) {
-                changeAppColor();
+                previousColor = currentColor;
             }
 
             @Override
@@ -223,7 +225,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
             @Override
             public void onAnimationRepeat(Animation animation) {}
         });
-        mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[currentColor]);
+        mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[previousColor]);
         mFrameLayout.findViewById(R.id.app_color).startAnimation(fadeOut);
     }
 
@@ -275,10 +277,33 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
             } else {
                 byte[] manufacturerData = scanRecord.getBytes(); //GETTING BEACON PDU
                 byte[] uuidBytes = new byte[16]; // UUID ARRAY
-                System.arraycopy(manufacturerData, 6, uuidBytes, 0, 16); // COPYING UUID BYTES
-                //String uuid = getGuidFromByteArray(uuidBytes);
-                //double txPower = -70;
+                System.arraycopy(manufacturerData, 0, uuidBytes, 0, 16); // COPYING UUID BYTES
+                String uuid = getGuidFromByteArray(uuidBytes);
+
+                String mac = result.getDevice().getAddress();
                 double rssi = result.getRssi();
+
+                Snackbar.make(findViewById(R.id.fullscreen_layout),
+                        "UUID: " + uuid + "\nMAC: " + mac + " - RSSI: " + rssi,
+                        Snackbar.LENGTH_INDEFINITE).show();
+
+                if(rssi < -50){
+                    changeAppColor(0);
+                } else if(rssi < -45){
+                    changeAppColor(1);
+                } else if(rssi < -40){
+                    changeAppColor(2);
+                } else if(rssi < -35){
+                    changeAppColor(3);
+                } else if(rssi < -30){
+                    changeAppColor(4);
+                } else if(rssi < -25){
+                    changeAppColor(5);
+                } else if(rssi < -20){
+                    changeAppColor(6);
+                } else{
+                    changeAppColor(7);
+                }
             }
         }
         @Override
@@ -341,5 +366,24 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if(resultCode == REQUEST_ENABLE_BT) enableBluetoothScanner();
+    }
+
+    public static String getGuidFromByteArray(byte[] bytes) {
+        ByteBuffer bb = ByteBuffer.wrap(bytes);
+        long high = bb.getLong();
+        long low = bb.getLong();
+        UUID uuid = new UUID(high, low);
+        return uuid.toString();
+    }
+
+    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+    public static String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for ( int j = 0; j < bytes.length; j++ ) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        return new String(hexChars);
     }
 }
