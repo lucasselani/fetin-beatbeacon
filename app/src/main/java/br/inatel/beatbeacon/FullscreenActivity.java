@@ -13,6 +13,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.os.Parcel;
+import android.os.ParcelUuid;
 import android.support.design.widget.Snackbar;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -21,6 +23,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -31,6 +34,8 @@ import android.widget.Toast;
 
 import java.nio.ByteBuffer;
 import java.security.Permissions;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static br.inatel.beatbeacon.R.id.app_color;
@@ -184,7 +189,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     private void changeAppColor(final int currentColor){
         if(currentColor == previousColor) return;
 
-        if(mFrameLayout.getChildCount() > 1) {
+        while(mFrameLayout.getChildCount() > 1) {
             mFrameLayout.removeView(findViewById(R.id.app_color));
         }
 
@@ -194,7 +199,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         final Animation fadeOut = new AlphaAnimation(1.00f, 0.00f);
         final Animation fadeIn = new AlphaAnimation(0.00f, 1.00f);
 
-        fadeIn.setDuration(500);
+        fadeIn.setDuration(1000);
         fadeIn.setAnimationListener(new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
@@ -212,7 +217,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
             }
         });
 
-        fadeOut.setDuration(500);
+        fadeOut.setDuration(1000);
         fadeOut.setAnimationListener(new Animation.AnimationListener(){
             @Override
             public void onAnimationStart(Animation animation) {}
@@ -275,29 +280,27 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
                 Log.w(TAG, "Null ScanRecord for device " + result.getDevice().getAddress());
                 return;
             } else {
-                byte[] manufacturerData = scanRecord.getBytes(); //GETTING BEACON PDU
-                byte[] uuidBytes = new byte[16]; // UUID ARRAY
-                System.arraycopy(manufacturerData, 0, uuidBytes, 0, 16); // COPYING UUID BYTES
-                String uuid = getGuidFromByteArray(uuidBytes);
-
+                String uuid = scanRecord.getServiceUuids().get(0).getUuid().toString();
                 String mac = result.getDevice().getAddress();
                 double rssi = result.getRssi();
 
+                //DEBUGING OPTIONS
                 Snackbar.make(findViewById(R.id.fullscreen_layout),
                         "UUID: " + uuid + "\nMAC: " + mac + " - RSSI: " + rssi,
                         Snackbar.LENGTH_INDEFINITE).show();
+                Log.v(TAG, "UUID: " + uuid + "\nMAC: " + mac + " - RSSI: " + rssi);
 
-                if(rssi < -50){
+                if(rssi < -80){
                     changeAppColor(0);
-                } else if(rssi < -45){
+                } else if(rssi < -70){
                     changeAppColor(1);
-                } else if(rssi < -40){
+                } else if(rssi < -60){
                     changeAppColor(2);
-                } else if(rssi < -35){
+                } else if(rssi < -50){
                     changeAppColor(3);
-                } else if(rssi < -30){
+                } else if(rssi < -40){
                     changeAppColor(4);
-                } else if(rssi < -25){
+                } else if(rssi < -30){
                     changeAppColor(5);
                 } else if(rssi < -20){
                     changeAppColor(6);
