@@ -30,6 +30,7 @@ import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.nio.ByteBuffer;
@@ -37,6 +38,7 @@ import java.security.Permissions;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Delayed;
 
 import static br.inatel.beatbeacon.R.id.app_color;
 
@@ -47,19 +49,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
     private static final int UI_ANIMATION_DELAY = 300;
     private final Handler mHideHandler = new Handler();
-    private View mContentView;
-    private final Runnable mHidePart2Runnable = new Runnable() {
-        @SuppressLint("InlinedApi")
-        @Override
-        public void run() {
-            mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE
-                    | View.SYSTEM_UI_FLAG_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
-        }
-    };
     private final Runnable mShowPart2Runnable = new Runnable() {
         @Override
         public void run() {
@@ -91,13 +80,19 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     private static final int REQUEST_ENABLE_BT = 1;
     private static final String TAG = FullscreenActivity.class.getName();
     private static final String UUID_BEACON = "88c4649c-9875-4b8f-b2e6-5d06ae55f38c";
+    private static final int INTERVAL = 1000;
+    private Handler handler;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
     private FrameLayout mFrameLayout;
 
     private final int COLORS[] = {Color.BLACK, Color.GREEN, Color.BLUE, Color.YELLOW, Color.RED,
                                 Color.GRAY, Color.CYAN, Color.MAGENTA, Color.WHITE};
+    private final String POSITIONS[] = {"1","2","3","4","5","6","7","8","9"};
     private int previousColor = 0;
+    private double totalRssi = 0;
+    private int totalSamples = 0;
+    private boolean alreadyScanned = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,16 +102,9 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         mFrameLayout = (FrameLayout) findViewById(R.id.fullscreen_layout);
 
         mVisible = true;
-        mContentView = findViewById(R.id.fullscreen_content);
 
-
+        handler = new Handler();
         // Set up the user interaction to manually show or hide the system UI.
-        mContentView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                toggle();
-            }
-        });
     }
 
     @Override
@@ -147,18 +135,14 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
 
         // Schedule a runnable to remove the status and navigation bar after a delay
         mHideHandler.removeCallbacks(mShowPart2Runnable);
-        mHideHandler.postDelayed(mHidePart2Runnable, UI_ANIMATION_DELAY);
     }
 
     @SuppressLint("InlinedApi")
     private void show() {
         // Show the system bar
-        mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         mVisible = true;
 
         // Schedule a runnable to display UI elements after a delay
-        mHideHandler.removeCallbacks(mHidePart2Runnable);
         mHideHandler.postDelayed(mShowPart2Runnable, UI_ANIMATION_DELAY);
     }
 
@@ -189,7 +173,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     private void changeAppColor(final int currentColor){
         if(currentColor == previousColor) return;
 
-        while(mFrameLayout.getChildCount() > 1) {
+        while(mFrameLayout.getChildCount() > 0) {
             mFrameLayout.removeView(findViewById(R.id.app_color));
         }
 
@@ -204,6 +188,9 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
             @Override
             public void onAnimationStart(Animation animation) {
                 mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[currentColor]);
+                ((TextView) mFrameLayout.findViewById(R.id.app_color)
+                        .findViewById(R.id.position_content))
+                        .setText(POSITIONS[currentColor]);
             }
 
             @Override
@@ -231,6 +218,11 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
             public void onAnimationRepeat(Animation animation) {}
         });
         mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[previousColor]);
+
+        ((TextView) mFrameLayout.findViewById(R.id.app_color)
+                .findViewById(R.id.position_content))
+                .setText(POSITIONS[previousColor]);
+
         mFrameLayout.findViewById(R.id.app_color).startAnimation(fadeOut);
     }
 
@@ -280,32 +272,65 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
                 Log.w(TAG, "Null ScanRecord for device " + result.getDevice().getAddress());
                 return;
             } else {
-                String uuid = scanRecord.getServiceUuids().get(0).getUuid().toString();
-                String mac = result.getDevice().getAddress();
-                double rssi = result.getRssi();
+                String uuid = null;
+                final String mac = result.getDevice().getAddress();
 
-                //DEBUGING OPTIONS
-                Snackbar.make(findViewById(R.id.fullscreen_layout),
-                        "UUID: " + uuid + "\nMAC: " + mac + " - RSSI: " + rssi,
-                        Snackbar.LENGTH_INDEFINITE).show();
-                Log.v(TAG, "UUID: " + uuid + "\nMAC: " + mac + " - RSSI: " + rssi);
+                List<ParcelUuid> serviceUuids = scanRecord.getServiceUuids();
+                if(serviceUuids != null){
+                    if(!serviceUuids.isEmpty()){
+                        uuid = scanRecord.getServiceUuids().get(0).getUuid().toString();
+                    } else return;
+                }
+/*                else return;
+                //SAINDO CASO SEJA DIFERENTE
+                try{
+                    if(!uuid.equals(UUID_BEACON)) return;
+                }catch (NullPointerException e){
+                    e.printStackTrace();
+                    return;
+                }*/
 
-                if(rssi < -80){
-                    changeAppColor(0);
-                } else if(rssi < -70){
-                    changeAppColor(1);
-                } else if(rssi < -60){
-                    changeAppColor(2);
-                } else if(rssi < -50){
-                    changeAppColor(3);
-                } else if(rssi < -40){
-                    changeAppColor(4);
-                } else if(rssi < -30){
-                    changeAppColor(5);
-                } else if(rssi < -20){
-                    changeAppColor(6);
-                } else{
-                    changeAppColor(7);
+                totalRssi += result.getRssi();
+                totalSamples++;
+
+                Log.v(TAG, "RSSI: " + totalRssi + " Samples: " + totalSamples);
+
+                if(!alreadyScanned){
+                    alreadyScanned = true;
+                    handler.postDelayed(new Runnable(){
+                        public void run(){
+                            double rssi = totalRssi/totalSamples;
+                            if(!Double.isNaN(rssi)) {
+                                //DEBUGING OPTIONS
+                                Snackbar.make(findViewById(R.id.fullscreen_layout),
+                                        "MAC: " + mac + " - RSSI: " + rssi,
+                                        Snackbar.LENGTH_INDEFINITE).show();
+                                Log.v(TAG,"MAC: " + mac + " - RSSI: " + rssi);
+
+                                if(rssi < -80){
+                                    changeAppColor(0);
+                                } else if(rssi < -70){
+                                    changeAppColor(1);
+                                } else if(rssi < -60){
+                                    changeAppColor(2);
+                                } else if(rssi < -50){
+                                    changeAppColor(3);
+                                } else if(rssi < -40){
+                                    changeAppColor(4);
+                                } else if(rssi < -30){
+                                    changeAppColor(5);
+                                } else if(rssi < -20){
+                                    changeAppColor(6);
+                                } else{
+                                    changeAppColor(7);
+                                }
+
+                                totalRssi = 0;
+                                totalSamples = 0;
+                            }
+                            handler.postDelayed(this, INTERVAL);
+                        }
+                    }, INTERVAL);
                 }
             }
         }
