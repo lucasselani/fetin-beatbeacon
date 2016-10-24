@@ -81,14 +81,15 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     private static final String TAG = FullscreenActivity.class.getName();
     private static final String UUID_BEACON = "88c4649c-9875-4b8f-b2e6-5d06ae55f38c";
     private static final int INTERVAL = 1000;
+    private static final int BEAT_INTERVAL = 50;
     private Handler handler;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
     private FrameLayout mFrameLayout;
 
     private final int COLORS[] = {Color.BLACK, Color.GREEN, Color.BLUE, Color.YELLOW, Color.RED,
-                                Color.GRAY, Color.CYAN, Color.MAGENTA, Color.WHITE};
-    private final String POSITIONS[] = {"1","2","3","4","5","6","7","8","9"};
+            Color.GRAY, Color.CYAN, Color.MAGENTA, Color.WHITE};
+    private final String POSITIONS[] = {"1", "2", "3", "4", "5", "6", "7", "8", "9"};
     private int previousColor = 0;
     private double totalRssi = 0;
     private int totalSamples = 0;
@@ -170,15 +171,63 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         unregisterReceiver(mReceiver);
     }
 
-    private void changeAppColor(final int currentColor){
-        if(currentColor == previousColor) return;
-
-        while(mFrameLayout.getChildCount() > 0) {
+    private void beatAppColor (final int currentColor) {
+        while (mFrameLayout.getChildCount() > 0) {
             mFrameLayout.removeView(findViewById(R.id.app_color));
         }
 
-        LayoutInflater layoutInflater = (LayoutInflater)this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        View inflatedLayout= layoutInflater.inflate(R.layout.color_layout, null, false);
+        LayoutInflater layoutInflater = (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View inflatedLayout = layoutInflater.inflate(R.layout.color_layout, null, false);
+        mFrameLayout.addView(inflatedLayout);
+        final Animation fadeOut = new AlphaAnimation(1.00f, 0.00f);
+        final Animation fadeIn = new AlphaAnimation(0.00f, 1.00f);
+
+        fadeIn.setDuration(BEAT_INTERVAL);
+        fadeIn.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+                mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[currentColor]);
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                previousColor = currentColor;
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+
+        fadeOut.setDuration(BEAT_INTERVAL);
+        fadeOut.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                mFrameLayout.findViewById(R.id.app_color).startAnimation(fadeIn);
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+            }
+        });
+        mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[previousColor]);
+        mFrameLayout.findViewById(R.id.app_color).startAnimation(fadeOut);
+    }
+
+    /*private void changeAppColor(final int currentColor) {
+        if (currentColor == previousColor) return;
+
+        while (mFrameLayout.getChildCount() > 0) {
+            mFrameLayout.removeView(findViewById(R.id.app_color));
+        }
+
+        LayoutInflater layoutInflater = (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View inflatedLayout = layoutInflater.inflate(R.layout.color_layout, null, false);
         mFrameLayout.addView(inflatedLayout);
         final Animation fadeOut = new AlphaAnimation(1.00f, 0.00f);
         final Animation fadeIn = new AlphaAnimation(0.00f, 1.00f);
@@ -205,9 +254,10 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         });
 
         fadeOut.setDuration(1000);
-        fadeOut.setAnimationListener(new Animation.AnimationListener(){
+        fadeOut.setAnimationListener(new Animation.AnimationListener() {
             @Override
-            public void onAnimationStart(Animation animation) {}
+            public void onAnimationStart(Animation animation) {
+            }
 
             @Override
             public void onAnimationEnd(Animation animation) {
@@ -215,7 +265,8 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
             }
 
             @Override
-            public void onAnimationRepeat(Animation animation) {}
+            public void onAnimationRepeat(Animation animation) {
+            }
         });
         mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[previousColor]);
 
@@ -224,20 +275,20 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
                 .setText(POSITIONS[previousColor]);
 
         mFrameLayout.findViewById(R.id.app_color).startAnimation(fadeOut);
-    }
+    }*/
 
     private void askPermissions() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED){
+                        != PackageManager.PERMISSION_GRANTED) {
             String[] permissions = {Manifest.permission.ACCESS_COARSE_LOCATION,
                     Manifest.permission.ACCESS_FINE_LOCATION};
             ActivityCompat.requestPermissions(this, permissions, 3030);
         }
     }
 
-    private void askEnableBluetooth(){
+    private void askEnableBluetooth() {
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null)
             Toast.makeText(this, "Seu dispositivo não suporta Bluetooth!", Toast.LENGTH_LONG);
@@ -247,23 +298,23 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         }
     }
 
-    private void enableBluetoothScanner(){
+    private void enableBluetoothScanner() {
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         Log.v(TAG, "Bluetooth Adapter Enabled");
-        if(!mBluetoothAdapter.isEnabled()) return;
+        if (!mBluetoothAdapter.isEnabled()) return;
         mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
-        if(mBluetoothLeScanner != null) {
+        if (mBluetoothLeScanner != null) {
             Log.v(TAG, "Bluetooth Scanner Enabled");
-            mBluetoothLeScanner.startScan(SCAN_FILTERS, SCAN_SETTINGS, scanCallback);
-        }
-        else{
+            //mBluetoothLeScanner.startScan(SCAN_FILTERS, SCAN_SETTINGS, avgScanCallback);
+            mBluetoothLeScanner.startScan(SCAN_FILTERS, SCAN_SETTINGS, beatScanCallback);
+        } else {
             Toast.makeText(FullscreenActivity.this,
                     "Seu dispositivo não suporta leitor de BLE!",
                     Toast.LENGTH_LONG).show();
         }
     }
 
-    private final ScanCallback scanCallback = new ScanCallback() {
+    private final ScanCallback beatScanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             Log.i("MainActivity", "Callback: Success");
@@ -276,8 +327,8 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
                 final String mac = result.getDevice().getAddress();
 
                 List<ParcelUuid> serviceUuids = scanRecord.getServiceUuids();
-                if(serviceUuids != null){
-                    if(!serviceUuids.isEmpty()){
+                if (serviceUuids != null) {
+                    if (!serviceUuids.isEmpty()) {
                         uuid = scanRecord.getServiceUuids().get(0).getUuid().toString();
                     } else return;
                 }
@@ -289,39 +340,93 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
                     e.printStackTrace();
                     return;
                 }*/
+                double rssi = result.getRssi();
+                if (rssi < -80) {
+                    beatAppColor(0);
+                } else if (rssi < -70) {
+                    beatAppColor(1);
+                } else if (rssi < -60) {
+                    beatAppColor(2);
+                } else if (rssi < -50) {
+                    beatAppColor(3);
+                } else if (rssi < -40) {
+                    beatAppColor(4);
+                } else if (rssi < -30) {
+                    beatAppColor(5);
+                } else if (rssi < -20) {
+                    beatAppColor(6);
+                } else {
+                    beatAppColor(7);
+                }
+
+            }
+        }
+
+        @Override
+        public void onScanFailed(int errorCode) {
+            Log.e(TAG, "onScanFailed errorCode " + errorCode);
+        }
+    };
+
+    /*private final ScanCallback avgScanCallback = new ScanCallback() {
+        @Override
+        public void onScanResult(int callbackType, ScanResult result) {
+            Log.i("MainActivity", "Callback: Success");
+            ScanRecord scanRecord = result.getScanRecord();
+            if (scanRecord == null) {
+                Log.w(TAG, "Null ScanRecord for device " + result.getDevice().getAddress());
+                return;
+            } else {
+                String uuid = null;
+                final String mac = result.getDevice().getAddress();
+
+                List<ParcelUuid> serviceUuids = scanRecord.getServiceUuids();
+                if (serviceUuids != null) {
+                    if (!serviceUuids.isEmpty()) {
+                        uuid = scanRecord.getServiceUuids().get(0).getUuid().toString();
+                    } else return;
+                }
+*//*                else return;
+                //SAINDO CASO SEJA DIFERENTE
+                try{
+                    if(!uuid.equals(UUID_BEACON)) return;
+                }catch (NullPointerException e){
+                    e.printStackTrace();
+                    return;
+                }*//*
 
                 totalRssi += result.getRssi();
                 totalSamples++;
 
                 Log.v(TAG, "RSSI: " + totalRssi + " Samples: " + totalSamples);
 
-                if(!alreadyScanned){
+                if (!alreadyScanned) {
                     alreadyScanned = true;
-                    handler.postDelayed(new Runnable(){
-                        public void run(){
-                            double rssi = totalRssi/totalSamples;
-                            if(!Double.isNaN(rssi)) {
+                    handler.postDelayed(new Runnable() {
+                        public void run() {
+                            double rssi = totalRssi / totalSamples;
+                            if (!Double.isNaN(rssi)) {
                                 //DEBUGING OPTIONS
                                 Snackbar.make(findViewById(R.id.fullscreen_layout),
                                         "MAC: " + mac + " - RSSI: " + rssi,
                                         Snackbar.LENGTH_INDEFINITE).show();
-                                Log.v(TAG,"MAC: " + mac + " - RSSI: " + rssi);
+                                Log.v(TAG, "MAC: " + mac + " - RSSI: " + rssi);
 
-                                if(rssi < -80){
+                                if (rssi < -80) {
                                     changeAppColor(0);
-                                } else if(rssi < -70){
+                                } else if (rssi < -70) {
                                     changeAppColor(1);
-                                } else if(rssi < -60){
+                                } else if (rssi < -60) {
                                     changeAppColor(2);
-                                } else if(rssi < -50){
+                                } else if (rssi < -50) {
                                     changeAppColor(3);
-                                } else if(rssi < -40){
+                                } else if (rssi < -40) {
                                     changeAppColor(4);
-                                } else if(rssi < -30){
+                                } else if (rssi < -30) {
                                     changeAppColor(5);
-                                } else if(rssi < -20){
+                                } else if (rssi < -20) {
                                     changeAppColor(6);
-                                } else{
+                                } else {
                                     changeAppColor(7);
                                 }
 
@@ -334,11 +439,12 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
                 }
             }
         }
+
         @Override
         public void onScanFailed(int errorCode) {
             Log.e(TAG, "onScanFailed errorCode " + errorCode);
         }
-    };
+    };*/
 
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -369,21 +475,18 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     };
 
     @Override
-    public void onRequestPermissionsResult(int requestCode,@NonNull String permissions[], @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         try {
             enableBluetoothScanner();
-        }
-        catch (SecurityException se){
+        } catch (SecurityException se) {
             Toast.makeText(FullscreenActivity.this,
                     "Não é possível usar o aplicativo sem conceder permissões!",
                     Toast.LENGTH_LONG).show();
             askPermissions();
-        }
-
-        catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
-            if(!mBluetoothAdapter.isEnabled()){
+            if (!mBluetoothAdapter.isEnabled()) {
                 Intent enableBTIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                 startActivityForResult(enableBTIntent, REQUEST_ENABLE_BT);
             }
@@ -393,7 +496,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(resultCode == REQUEST_ENABLE_BT) enableBluetoothScanner();
+        if (resultCode == REQUEST_ENABLE_BT) enableBluetoothScanner();
     }
 
     public static String getGuidFromByteArray(byte[] bytes) {
@@ -405,9 +508,10 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     }
 
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+
     public static String bytesToHex(byte[] bytes) {
         char[] hexChars = new char[bytes.length * 2];
-        for ( int j = 0; j < bytes.length; j++ ) {
+        for (int j = 0; j < bytes.length; j++) {
             int v = bytes[j] & 0xFF;
             hexChars[j * 2] = hexArray[v >>> 4];
             hexChars[j * 2 + 1] = hexArray[v & 0x0F];
