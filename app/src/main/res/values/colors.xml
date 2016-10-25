@@ -5,6 +5,13 @@
     <color name="colorAccent">#FF4081</color>
     <color name="black_overlay">#66000000</color>
 
+    <!-- Material Design Colors-->
+    <color name="redA200"> #ffff5252 </color>
+    <color name="blue300"> #ff64b5f6 </color>
+    <color name="lgreenA400"> #ff76ff03 </color>
+    <color name="yellowA200"> #ffffff00 </color>
+    <color name="dpurpleA700"> #ff6200ea </color>
+
     <!-- Colors to identify use -->
     <color name="White">#FFFFFF</color>
     <color name="Ivory">#FFFFF0</color>

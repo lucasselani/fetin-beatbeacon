@@ -13,11 +13,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.os.AsyncTask;
 import android.os.Parcel;
 import android.os.ParcelUuid;
 import android.support.design.widget.Snackbar;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -81,15 +83,20 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     private static final String TAG = FullscreenActivity.class.getName();
     private static final String UUID_BEACON = "88c4649c-9875-4b8f-b2e6-5d06ae55f38c";
     private static final int INTERVAL = 1000;
-    private static final int BEAT_INTERVAL = 50;
+    private boolean isAnimating = false;
     private Handler handler;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
     private FrameLayout mFrameLayout;
 
-    private final int COLORS[] = {Color.BLACK, Color.GREEN, Color.BLUE, Color.YELLOW, Color.RED,
-            Color.GRAY, Color.CYAN, Color.MAGENTA, Color.WHITE};
-    private final String POSITIONS[] = {"1", "2", "3", "4", "5", "6", "7", "8", "9"};
+    // ---------------------BEAT CONFIGURATION --------------------------------------
+    private static final float FADE = 0.2f;
+    private static final int BEAT_INTERVAL = 100;
+    private static final int FADEIN_OFFSET = 50;
+    // -------------------------------------------------------------------------------
+    private final int COLORS[] = {R.color.yellowA200, R.color.lgreenA400, R.color.redA200,
+            R.color.dpurpleA700, R.color.blue300};
+    private final String POSITIONS[] = {"1", "2", "3", "4", "5"};
     private int previousColor = 0;
     private double totalRssi = 0;
     private int totalSamples = 0;
@@ -172,6 +179,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     }
 
     private void beatAppColor (final int currentColor) {
+        isAnimating = true;
         while (mFrameLayout.getChildCount() > 0) {
             mFrameLayout.removeView(findViewById(R.id.app_color));
         }
@@ -179,19 +187,21 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         LayoutInflater layoutInflater = (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View inflatedLayout = layoutInflater.inflate(R.layout.color_layout, null, false);
         mFrameLayout.addView(inflatedLayout);
-        final Animation fadeOut = new AlphaAnimation(1.00f, 0.00f);
-        final Animation fadeIn = new AlphaAnimation(0.00f, 1.00f);
+        final Animation fadeOut = new AlphaAnimation(1.00f, FADE);
+        final Animation fadeIn = new AlphaAnimation(FADE, 1.00f);
 
+        fadeIn.setStartOffset(FADEIN_OFFSET);
         fadeIn.setDuration(BEAT_INTERVAL);
         fadeIn.setAnimationListener(new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
-                mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[currentColor]);
+                //mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[currentColor]);
             }
 
             @Override
             public void onAnimationEnd(Animation animation) {
                 previousColor = currentColor;
+                isAnimating = false;
             }
 
             @Override
@@ -215,7 +225,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
             public void onAnimationRepeat(Animation animation) {
             }
         });
-        mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[previousColor]);
+        mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(ContextCompat.getColor(this, COLORS[currentColor]));
         mFrameLayout.findViewById(R.id.app_color).startAnimation(fadeOut);
     }
 
@@ -323,6 +333,11 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
                 Log.w(TAG, "Null ScanRecord for device " + result.getDevice().getAddress());
                 return;
             } else {
+                if(isAnimating){
+                    Log.v("Callback", "Is Animating");
+                    return;
+                }
+
                 String uuid = null;
                 final String mac = result.getDevice().getAddress();
 
@@ -341,23 +356,24 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
                     return;
                 }*/
                 double rssi = result.getRssi();
-                if (rssi < -80) {
+                Log.i("RSSI: ", ""+rssi);
+                if (rssi < -90) {
                     beatAppColor(0);
-                } else if (rssi < -70) {
+                } else if (rssi < -80) {
                     beatAppColor(1);
-                } else if (rssi < -60) {
+                } else if (rssi < -70) {
                     beatAppColor(2);
-                } else if (rssi < -50) {
+                } else if (rssi < -60) {
                     beatAppColor(3);
-                } else if (rssi < -40) {
+                } else if (rssi < -50) {
                     beatAppColor(4);
-                } else if (rssi < -30) {
+                } /*else if (rssi < -30) {
                     beatAppColor(5);
                 } else if (rssi < -20) {
                     beatAppColor(6);
                 } else {
                     beatAppColor(7);
-                }
+                }*/
 
             }
         }
