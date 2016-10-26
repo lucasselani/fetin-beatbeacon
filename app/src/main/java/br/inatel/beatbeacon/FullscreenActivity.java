@@ -101,6 +101,8 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     // -------------------------------------------------------------------------------
     private final int COLORS[] = {R.color.yellowA200, R.color.lgreenA400, R.color.redA200,
             R.color.dpurpleA700, R.color.blue300};
+    private final int STYLE[] = {R.style.yellowAppTheme, R.style.greenAppTheme, R.style.redAppTheme,
+            R.style.purpleAppTheme, R.style.blueAppTheme};
     private final String POSITIONS[] = {"1", "2", "3", "4", "5"};
     private int previousColor = 0;
     private double totalRssi = 0;
@@ -146,6 +148,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
                 }
             }
         });
+
         // Set up the user interaction to manually show or hide the system UI.
     }
 
@@ -212,6 +215,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         unregisterReceiver(mReceiver);
     }
 
+
     private void beatAppColor (final int currentColor) {
         isAnimating = true;
         while (mFrameLayout.getChildCount() > 1) {
@@ -229,14 +233,19 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         fadeIn.setAnimationListener(new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
-                //mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[currentColor]);
+
             }
 
             @Override
             public void onAnimationEnd(Animation animation) {
                 previousColor = currentColor;
                 isAnimating = false;
-                if(useFlash) handleActionTurnOffFlashLight();
+                new Handler().post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if(useFlash) handleActionTurnOffFlashLight();
+                    }
+                });
             }
 
             @Override
@@ -260,68 +269,18 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
             public void onAnimationRepeat(Animation animation) {
             }
         });
+
+        new Handler().post(new Runnable() {
+            @Override
+            public void run() {
+                if(useFlash) handleActionTurnOnFlashLight();
+            }
+        });
+
         mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(ContextCompat.getColor(this, COLORS[currentColor]));
         mFrameLayout.findViewById(R.id.app_color).startAnimation(fadeOut);
-        if(useFlash) handleActionTurnOnFlashLight();
     }
 
-    /*private void changeAppColor(final int currentColor) {
-        if (currentColor == previousColor) return;
-
-        while (mFrameLayout.getChildCount() > 0) {
-            mFrameLayout.removeView(findViewById(R.id.app_color));
-        }
-
-        LayoutInflater layoutInflater = (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        View inflatedLayout = layoutInflater.inflate(R.layout.color_layout, null, false);
-        mFrameLayout.addView(inflatedLayout);
-        final Animation fadeOut = new AlphaAnimation(1.00f, 0.00f);
-        final Animation fadeIn = new AlphaAnimation(0.00f, 1.00f);
-
-        fadeIn.setDuration(1000);
-        fadeIn.setAnimationListener(new Animation.AnimationListener() {
-            @Override
-            public void onAnimationStart(Animation animation) {
-                mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[currentColor]);
-                ((TextView) mFrameLayout.findViewById(R.id.app_color)
-                        .findViewById(R.id.position_content))
-                        .setText(POSITIONS[currentColor]);
-            }
-
-            @Override
-            public void onAnimationEnd(Animation animation) {
-                previousColor = currentColor;
-            }
-
-            @Override
-            public void onAnimationRepeat(Animation animation) {
-
-            }
-        });
-
-        fadeOut.setDuration(1000);
-        fadeOut.setAnimationListener(new Animation.AnimationListener() {
-            @Override
-            public void onAnimationStart(Animation animation) {
-            }
-
-            @Override
-            public void onAnimationEnd(Animation animation) {
-                mFrameLayout.findViewById(R.id.app_color).startAnimation(fadeIn);
-            }
-
-            @Override
-            public void onAnimationRepeat(Animation animation) {
-            }
-        });
-        mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(COLORS[previousColor]);
-
-        ((TextView) mFrameLayout.findViewById(R.id.app_color)
-                .findViewById(R.id.position_content))
-                .setText(POSITIONS[previousColor]);
-
-        mFrameLayout.findViewById(R.id.app_color).startAnimation(fadeOut);
-    }*/
 
     private void askPermissions() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -383,14 +342,15 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
                         uuid = scanRecord.getServiceUuids().get(0).getUuid().toString();
                     } else return;
                 }
-/*                else return;
+                else return;
                 //SAINDO CASO SEJA DIFERENTE
                 try{
                     if(!uuid.equals(UUID_BEACON)) return;
                 }catch (NullPointerException e){
                     e.printStackTrace();
                     return;
-                }*/
+                }
+
                 double rssi = result.getRssi();
                 Log.i("RSSI: ", ""+rssi);
                 if (rssi < -90) {

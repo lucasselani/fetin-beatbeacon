@@ -8,6 +8,41 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <style name="blueAppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">#8c9eff</item>
+        <item name="colorPrimaryDark">#3f51b5</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="redAppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">#ff5252</item>
+        <item name="colorPrimaryDark">#b71c1c</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="greenAppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">#b2ff59</item>
+        <item name="colorPrimaryDark">#00c853</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="yellowAppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">#ffff8d</item>
+        <item name="colorPrimaryDark">#ffea00</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="purpleAppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">#b388ff</item>
+        <item name="colorPrimaryDark">#651fff</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
     <style name="FullscreenTheme" parent="AppTheme">
         <item name="android:actionBarStyle">@style/FullscreenActionBarStyle</item>
         <item name="android:windowActionBarOverlay">true</item>
