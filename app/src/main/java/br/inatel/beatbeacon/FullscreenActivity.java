@@ -13,9 +13,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.hardware.Camera;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraManager;
 import android.os.AsyncTask;
 import android.os.Parcel;
 import android.os.ParcelUuid;
+import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -37,6 +41,7 @@ import android.widget.Toast;
 
 import java.nio.ByteBuffer;
 import java.security.Permissions;
+import java.security.Policy;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -91,8 +96,8 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
 
     // ---------------------BEAT CONFIGURATION --------------------------------------
     private static final float FADE = 0.2f;
-    private static final int BEAT_INTERVAL = 100;
-    private static final int FADEIN_OFFSET = 50;
+    private static final int BEAT_INTERVAL = 20;
+    private static final int FADEIN_OFFSET = 10;
     // -------------------------------------------------------------------------------
     private final int COLORS[] = {R.color.yellowA200, R.color.lgreenA400, R.color.redA200,
             R.color.dpurpleA700, R.color.blue300};
@@ -101,6 +106,11 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     private double totalRssi = 0;
     private int totalSamples = 0;
     private boolean alreadyScanned = false;
+    private boolean isFlashOn;
+    private boolean useFlash = false;
+    private String[] cameraList = null;
+    private CameraManager manager = null;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,6 +122,30 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         mVisible = true;
 
         handler = new Handler();
+
+        handleCameraManager(this);
+
+        final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_flash_off_white_24dp));
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(!useFlash){
+                    if(getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)){
+                        fab.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(),
+                                R.drawable.ic_flash_on_white_24dp));
+                        useFlash = true;
+                    }
+                } else {
+                    if (getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)) {
+                        fab.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(),
+                                R.drawable.ic_flash_off_white_24dp));
+                        handleActionTurnOffFlashLight();
+                        useFlash = false;
+                    }
+                }
+            }
+        });
         // Set up the user interaction to manually show or hide the system UI.
     }
 
@@ -180,7 +214,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
 
     private void beatAppColor (final int currentColor) {
         isAnimating = true;
-        while (mFrameLayout.getChildCount() > 0) {
+        while (mFrameLayout.getChildCount() > 1) {
             mFrameLayout.removeView(findViewById(R.id.app_color));
         }
 
@@ -202,6 +236,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
             public void onAnimationEnd(Animation animation) {
                 previousColor = currentColor;
                 isAnimating = false;
+                if(useFlash) handleActionTurnOffFlashLight();
             }
 
             @Override
@@ -227,6 +262,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         });
         mFrameLayout.findViewById(R.id.app_color).setBackgroundColor(ContextCompat.getColor(this, COLORS[currentColor]));
         mFrameLayout.findViewById(R.id.app_color).startAnimation(fadeOut);
+        if(useFlash) handleActionTurnOnFlashLight();
     }
 
     /*private void changeAppColor(final int currentColor) {
@@ -533,5 +569,32 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
             hexChars[j * 2 + 1] = hexArray[v & 0x0F];
         }
         return new String(hexChars);
+    }
+
+    private void handleCameraManager(Context context){
+        try{
+            manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+            cameraList = manager.getCameraIdList();
+            Log.v("CameraManager", "Ligando camera manager!");
+        } catch (CameraAccessException cae){
+            Log.e(TAG, cae.getMessage());
+            cae.printStackTrace();
+        }
+    }
+
+    private void handleActionTurnOnFlashLight(){
+        try{
+            manager.setTorchMode(cameraList[0], true);
+        } catch (CameraAccessException e){
+            e.printStackTrace();
+        }
+    }
+
+    private void handleActionTurnOffFlashLight(){
+        try{
+            manager.setTorchMode(cameraList[0], false);
+        } catch (CameraAccessException e){
+            e.printStackTrace();
+        }
     }
 }

@@ -11,9 +11,9 @@
         android:layout_height="match_parent"
         android:gravity="center"
         android:keepScreenOn="true"
-        android:text=""
-        android:textColor="#33b5e5"
-        android:textSize="100sp"
+        android:text="Beat Beacon"
+        android:textColor="#C0C0C0"
+        android:textSize="50sp"
         android:textStyle="bold" />
 
 </LinearLayout>
