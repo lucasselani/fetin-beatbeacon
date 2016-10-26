@@ -87,7 +87,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     private static final int REQUEST_ENABLE_BT = 1;
     private static final String TAG = FullscreenActivity.class.getName();
     private static final String UUID_BEACON = "88c4649c-9875-4b8f-b2e6-5d06ae55f38c";
-    private static final int INTERVAL = 1000;
+    private static final int AVG_INTERVAL = 1000;
     private boolean isAnimating = false;
     private Handler handler;
     private BluetoothAdapter mBluetoothAdapter;
@@ -108,7 +108,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
     private double totalRssi = 0;
     private int totalSamples = 0;
     private boolean alreadyScanned = false;
-    private boolean isFlashOn;
     private boolean useFlash = false;
     private String[] cameraList = null;
     private CameraManager manager = null;
@@ -132,6 +131,12 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(manager == null){
+                    Snackbar.make(findViewById(R.id.fullscreen_layout),
+                            "Seu dispositivo não tem flash!",
+                            Snackbar.LENGTH_LONG).show();
+                    return;
+                }
                 if(!useFlash){
                     if(getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)){
                         fab.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(),
@@ -214,7 +219,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
         super.onPause();
         unregisterReceiver(mReceiver);
     }
-
 
     private void beatAppColor (final int currentColor) {
         isAnimating = true;
@@ -447,7 +451,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScanConfigu
                             }
                             handler.postDelayed(this, INTERVAL);
                         }
-                    }, INTERVAL);
+                    }, AVG_INTERVAL);
                 }
             }
         }
